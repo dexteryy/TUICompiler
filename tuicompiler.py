@@ -72,6 +72,23 @@ def main(argv=None):
                             #+ ('' if mo.group(2) else '_min') 
                             #+ '.' + mo.group(3), 
                  #output)
+
+    """压缩文件命名方式:
+        _g_src.js
+        _g.js
+
+        _g_combo.js
+        _g.js
+
+        jquery_pack.js
+        jquery_pack_min.js
+
+        _yy_src.pack.js
+        _yy.js
+
+        _yy_bak.pack_pack.js
+        _yy_bak.pack_pack_min.js
+    """
     output_2 = re.sub(r'(.+?)(_src.*|_combo.*)?(\.\w+)$', 
                  lambda mo: mo.group(1)
                     + ('_min' if None == mo.group(2) else '')

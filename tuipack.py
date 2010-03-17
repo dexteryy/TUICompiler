@@ -58,18 +58,13 @@ def writeFile(filelist):
                 if warn:
                     raise Exception('svn ' + warn + ':' + f)
 
-            try:
-                rev = str(client.info2(f)[0][1].rev.number)
-            except:
-                rev = ''
-            code += '\n/* ' + f.replace(root, '').replace('\\', '') + ' ' + rev + ' */\n'
+            code += '\n/* ' + f.replace(root, '').replace('\\', '') + ' */\n'
 
             try:
                 file = open(f)
                 src = file.read()
                 char = chardet.detect(src)
                 file_charset = char['encoding']
-                print file_charset
                 if "ISO" in file_charset:
                     log('    [WARN] %s will decode with gb18030' % file_charset)
                     file_charset = "gb18030"
@@ -95,6 +90,19 @@ def writeFile(filelist):
 
 
 def getOutputName(input):
+    """打包文件命名方式:
+        _g_src.js
+        _g_combo.js
+
+        jquery.js
+        jquery_pack.js
+
+        _yy_src.pack.js
+        _yy_combo.js
+
+        _yy_bak.pack.js
+        _yy_bak.pack_pack.js
+    """
     return re.sub(r'(.+?)(_src.*)?(\.\w+)$',
             lambda mo: mo.group(1)
                 + ('_pack' if None == mo.group(2) else '_combo')

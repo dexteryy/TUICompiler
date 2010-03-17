@@ -1,0 +1,8 @@
+[tools]
+jscompressor=java -jar /Users/dexteryy/code/cmd/tuicompiler/yuicompressor.jar
+csscompressor=java -jar /Users/dexteryy/code/cmd/tuicompiler/yuicompressor.jar
+jspack=python /Users/dexteryy/code/cmd/tuicompiler/tuipack.py
+dos2unix=/Users/dexteryy/code/cmd/tuicompiler/dos2unix
+
+[tuipack]
+root=/Users/dexteryy/Sites/Tudouui/js/

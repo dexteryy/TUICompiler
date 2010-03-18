@@ -58,23 +58,46 @@ def writeFile(filelist):
                 if warn:
                     raise Exception('svn ' + warn + ':' + f)
 
-            code += '\n/* ' + f.replace(root, '').replace('\\', '') + ' */\n'
-
             try:
                 file = open(f)
-                src = file.read()
-                char = chardet.detect(src)
+                linecode = ''
+                line = '\n'
+                pathinfo = ' * ' + f.replace(root, '').replace('\\', '') + '\n'
+                scriptDoc = False
+                while line:
+                    if re.search(r'\s*\/\*', line):
+                        scriptDoc = True # 存在scriptDoc
+                        line += pathinfo
+                    elif not scriptDoc and re.search(r'\s*[^\/\s]', line):
+                        # 在ScriptDoc之前出现代码，停止逐行检查，在顶部插入新scriptDoc
+                        linecode = '/**\n' + pathinfo + ' */\n' + line
+                        break
+                    # 删除SVN关键字的语法标记，保留内容
+                    line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
+                    linecode += line
+                    # SVN关键字只应该出现在顶部第一个scriptDoc里，@import之上
+                    if '@import' in line or '*/' in line:
+                        break
+                    line = file.readline()
+
+                # 读取剩余的内容，与之前逐行取到的内容合并
+                try:
+                    src = file.read()
+                    if not src:
+                        raise Exception()
+                except:
+                    src = linecode
+                else:
+                    src = linecode + src
+
+                char = chardet.detect(src) # 侦测编码必须针对文件整体
                 file_charset = char['encoding']
                 if "ISO" in file_charset:
+                    # 中文可能被错误识别为latin编码
                     log('    [WARN] %s will decode with gb18030' % file_charset)
                     file_charset = "gb18030"
-                src = src.decode(file_charset)
-                #encode = char['encoding'].lower()
-                #if not (encode == charset if charset == 'utf-8' else 'gb' in encode):
-                    #log('\n[warning] ' + encode + ' NOT equal with output '
-                          #+ 'charset(' + charset + ')\n')
-                code += src
-            except:
+                code += src.decode(file_charset)
+            except Exception, e:
                 raise Exception('file not exist: ' + f)
             finally:
                 file.close()

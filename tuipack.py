@@ -21,11 +21,11 @@ def parseJS(src, files=[]):
 
 importRule = re.compile(r"@import\s+(\S+)")
 
-def getRequires(file):
+def getRequires(src):
     '''获取依赖文件列表'''
     requires = []
     try:
-        src = open(file)
+        src = open(src)
         for line in src:
             result = re.search(importRule, line)
             if not result == None:
@@ -44,12 +44,14 @@ def getRequires(file):
     return requires
 
 
-def parseDocs(f):
+def parseDocs(src):
+    f = None
     try:
-        file = open(f)
+        f = open(src) if type(src) != file else src
+        f.seek(0)
         linecode = ''
         line = '\n'
-        pathinfo = ' * ' + f.replace(root, '').replace('\\', '') + '\n'
+        pathinfo = ' * ' + f.name.replace(root, '').replace('\\', '') + '\n'
         scriptDoc = False
         while line:
             if re.search(r'\s*\/\*', line):
@@ -62,7 +64,7 @@ def parseDocs(f):
             elif re.search(r'@(import|!)', line):
                 # 移除原子文件的@import，避免重复导入
                 # 移除@!形式的标签
-                line = file.readline()
+                line = f.readline()
                 continue
             # 删除SVN关键字的语法标记，保留内容
             line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
@@ -70,12 +72,14 @@ def parseDocs(f):
             # SVN关键字只应该出现在顶部第一个scriptDoc里
             if '*/' in line:
                 break
-            line = file.readline()
+            line = f.readline()
     except Exception, e:
-        raise Exception('file not exist: ' + f)
+        raise Exception('file not exist: ' + f.name)
     finally:
-        pos = file.tell()
-        file.close()
+        if type(f) == file:
+            pos = f.tell()
+            if type(src) != file:
+                f.close()
     return linecode, pos
 
 
@@ -94,11 +98,11 @@ def writeFile(filelist):
                 if warn:
                     raise Exception('svn ' + warn + ':' + f)
 
-            linecode, pos = parseDocs(f)
-
+            js = None
             try:
-                file = open(f)
-                file.seek(pos)
+                js = open(f)
+                linecode, pos = parseDocs(js)
+                js.seek(pos)
                 
                 if file_count == 1:
                     code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code
@@ -106,7 +110,7 @@ def writeFile(filelist):
 
                 # 读取剩余的内容，与之前逐行取到的内容合并
                 try:
-                    src = file.read()
+                    src = js.read()
                     if not src:
                         raise Exception()
                 except:
@@ -127,7 +131,8 @@ def writeFile(filelist):
                 raise Exception('file not exist: ' + f)
             finally:
                 file_count -= 1
-                file.close()
+                if type(js) == file:
+                    js.close()
         log('    Import files: %d' % len(filelist))
     else:
         log('    Import files: 0')

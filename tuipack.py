@@ -49,7 +49,8 @@ def writeFile(filelist):
     code = ''
     log('Build: ')
 
-    if len(filelist) > 1:
+    file_count = len(filelist)
+    if file_count > 1:
         for f in filelist:
             log('    import ' + f)
 
@@ -70,15 +71,24 @@ def writeFile(filelist):
                         line += pathinfo
                     elif not scriptDoc and re.search(r'\s*[^\/\s]', line):
                         # 在ScriptDoc之前出现代码，停止逐行检查，在顶部插入新scriptDoc
-                        linecode = '/**\n' + pathinfo + ' */\n' + line
+                        linecode = '\n/**\n' + pathinfo + ' */\n' + line
                         break
+                    elif re.search(r'@(import|!)', line):
+                        # 移除原子文件的@import，避免重复导入
+                        # 移除@!形式的标签
+                        line = file.readline()
+                        continue
                     # 删除SVN关键字的语法标记，保留内容
                     line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
                     linecode += line
-                    # SVN关键字只应该出现在顶部第一个scriptDoc里，@import之上
-                    if '@import' in line or '*/' in line:
+                    # SVN关键字只应该出现在顶部第一个scriptDoc里
+                    if '*/' in line:
                         break
                     line = file.readline()
+                
+                if file_count == 1:
+                    code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code
+                    linecode = ''
 
                 # 读取剩余的内容，与之前逐行取到的内容合并
                 try:
@@ -90,16 +100,19 @@ def writeFile(filelist):
                 else:
                     src = linecode + src
 
-                char = chardet.detect(src) # 侦测编码必须针对文件整体
-                file_charset = char['encoding']
-                if "ISO" in file_charset:
-                    # 中文可能被错误识别为latin编码
-                    log('    [WARN] %s will decode with gb18030' % file_charset)
-                    file_charset = "gb18030"
-                code += src.decode(file_charset)
+                if src:
+                    char = chardet.detect(src) # 侦测编码必须针对文件整体
+                    file_charset = char['encoding'].lower()
+                    if 'utf-8' == file_charset or 'ascii' == file_charset:
+                        file_charset = "utf-8"
+                    else: # 中文可能被错误识别为latin编码
+                        file_charset = "gb18030"
+                    code += src.decode(file_charset)
+
             except Exception, e:
                 raise Exception('file not exist: ' + f)
             finally:
+                file_count -= 1
                 file.close()
         log('    Import files: %d' % len(filelist))
     else:

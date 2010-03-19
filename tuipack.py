@@ -45,9 +45,13 @@ def getRequires(src):
 
 
 def parseDocs(src):
+    """ 解析JS文件顶部的ScriptDoc / doc comments
+        如果参数为文件对象，退出时不关闭文件
+        总是返回处理后的注释，以及文件当前位置
+    """
     f = None
     try:
-        f = open(src) if type(src) != file else src
+        f = src if type(src) == file else open(src)
         f.seek(0)
         linecode = ''
         line = '\n'
@@ -104,9 +108,9 @@ def writeFile(filelist):
                 linecode, pos = parseDocs(js)
                 js.seek(pos)
                 
-                if file_count == 1:
+                if file_count == 1: # 最后一个文件是Input文件，原有scriptDoc移到顶部, 增增加包文件名的新scriptDoc
                     code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code
-                    linecode = ''
+                    linecode = '\n/**\n * ' + f.replace(root, '').replace('\\', '') + '\n */\n'
 
                 # 读取剩余的内容，与之前逐行取到的内容合并
                 try:

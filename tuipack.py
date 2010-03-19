@@ -44,6 +44,41 @@ def getRequires(file):
     return requires
 
 
+def parseDocs(f):
+    try:
+        file = open(f)
+        linecode = ''
+        line = '\n'
+        pathinfo = ' * ' + f.replace(root, '').replace('\\', '') + '\n'
+        scriptDoc = False
+        while line:
+            if re.search(r'\s*\/\*', line):
+                scriptDoc = True # 存在scriptDoc
+                line += pathinfo
+            elif not scriptDoc and re.search(r'\s*[^\/\s]', line):
+                # 在ScriptDoc之前出现代码，停止逐行检查，在顶部插入新scriptDoc
+                linecode = '\n/**\n' + pathinfo + ' */\n' + line
+                break
+            elif re.search(r'@(import|!)', line):
+                # 移除原子文件的@import，避免重复导入
+                # 移除@!形式的标签
+                line = file.readline()
+                continue
+            # 删除SVN关键字的语法标记，保留内容
+            line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
+            linecode += line
+            # SVN关键字只应该出现在顶部第一个scriptDoc里
+            if '*/' in line:
+                break
+            line = file.readline()
+    except Exception, e:
+        raise Exception('file not exist: ' + f)
+    finally:
+        pos = file.tell()
+        file.close()
+    return linecode, pos
+
+
 def writeFile(filelist):
     client = pysvn.Client()
     code = ''
@@ -59,32 +94,11 @@ def writeFile(filelist):
                 if warn:
                     raise Exception('svn ' + warn + ':' + f)
 
+            linecode, pos = parseDocs(f)
+
             try:
                 file = open(f)
-                linecode = ''
-                line = '\n'
-                pathinfo = ' * ' + f.replace(root, '').replace('\\', '') + '\n'
-                scriptDoc = False
-                while line:
-                    if re.search(r'\s*\/\*', line):
-                        scriptDoc = True # 存在scriptDoc
-                        line += pathinfo
-                    elif not scriptDoc and re.search(r'\s*[^\/\s]', line):
-                        # 在ScriptDoc之前出现代码，停止逐行检查，在顶部插入新scriptDoc
-                        linecode = '\n/**\n' + pathinfo + ' */\n' + line
-                        break
-                    elif re.search(r'@(import|!)', line):
-                        # 移除原子文件的@import，避免重复导入
-                        # 移除@!形式的标签
-                        line = file.readline()
-                        continue
-                    # 删除SVN关键字的语法标记，保留内容
-                    line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
-                    linecode += line
-                    # SVN关键字只应该出现在顶部第一个scriptDoc里
-                    if '*/' in line:
-                        break
-                    line = file.readline()
+                file.seek(pos)
                 
                 if file_count == 1:
                     code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code

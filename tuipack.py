@@ -44,7 +44,7 @@ def getRequires(src):
     return requires
 
 
-def parseDocs(src):
+def parseDocs(src, svnKeywords=False):
     """ 解析JS文件顶部的ScriptDoc / doc comments
         如果参数为文件对象，退出时不关闭文件
         总是返回处理后的注释，以及文件当前位置
@@ -71,9 +71,10 @@ def parseDocs(src):
                 line = f.readline()
                 continue
             # 删除SVN关键字的语法标记，保留内容
-            line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
-            linecode += line
+            if not svnKeywords:
+                line = re.sub(r'\$\w+\:?(.*?)\$', r'\1', line)
             # SVN关键字只应该出现在顶部第一个scriptDoc里
+            linecode += line
             if '*/' in line:
                 break
             line = f.readline()
@@ -105,7 +106,7 @@ def writeFile(filelist):
             js = None
             try:
                 js = open(f)
-                linecode, pos = parseDocs(js)
+                linecode, pos = parseDocs(js, svnKeywords=(file_count == 1))
                 js.seek(pos)
                 
                 if file_count == 1: # 最后一个文件是Input文件，原有scriptDoc移到顶部, 增增加包文件名的新scriptDoc

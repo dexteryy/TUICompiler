@@ -24,21 +24,23 @@ importRule = re.compile(r"@import\s+(\S+)")
 def getRequires(src):
     '''获取依赖文件列表'''
     requires = []
+    rootpath = root[filetype] if filetype != '' else root[os.path.splitext(src)[1]]
+
     try:
         src = open(src)
         for line in src:
             result = re.search(importRule, line)
             if not result == None:
                 result = result.group(1)
-                if not root in result:
-                    result = os.path.join(root, result)
+                if not rootpath in result:
+                    result = os.path.join(rootpath, result)
                 requires.append(result)
             else:
                 #只在顶部第一个ScriptDoc里查找连续的@import标签
                 if (len(requires) or '*/' in line):
                     break
     except:
-        pass
+        raise Exception('import error')
     else:
         src.close()
     return requires
@@ -55,7 +57,7 @@ def parseDocs(src, svnKeywords=False):
         f.seek(0)
         linecode = ''
         line = '\n'
-        pathinfo = ' * ' + f.name.replace(root, '').replace('\\', '') + '\n'
+        pathinfo = ' * ' + f.name.replace(root['base'], '').replace('\\', '') + '\n'
         scriptDoc = False
         while line:
             if re.search(r'\s*\/\*', line):
@@ -111,7 +113,7 @@ def writeFile(filelist):
                 
                 if file_count == 1: # 最后一个文件是Input文件，原有scriptDoc移到顶部, 增增加包文件名的新scriptDoc
                     code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code
-                    linecode = '\n/**\n * ' + f.replace(root, '').replace('\\', '') + '\n */\n'
+                    linecode = '\n/**\n * ' + f.replace(root['base'], '').replace('\\', '') + '\n */\n'
 
                 # 读取剩余的内容，与之前逐行取到的内容合并
                 try:
@@ -184,18 +186,23 @@ def getCharset(input):
 
 
 def initConfig():
-    global root
+    global root, filetype
     cf = ConfigParser.ConfigParser()
     confpath = os.path.join(os.path.dirname(__file__), "config")
     cf.read(confpath)
-    root = cf.get('tuipack','root')
+    root = {
+        'base': cf.get('tuipack','root'),
+        '.js': cf.get('tuipack','jsroot'),
+        '.css': cf.get('tuipack','cssroot')
+    }
+    filetype = ''
 
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    global log, output, charset, problem_file 
+    global log, output, charset, problem_file
 
 
     parser = OptionParser()
@@ -224,10 +231,11 @@ def main(argv=None):
     if args and args[0]:
         input = args[0]
     else:
-        raise Exception('input .js file')
+        raise Exception('no input file')
     
-    if os.path.splitext(input)[1] != '.js':
-        raise Exception('only .js file excepted')
+    filetype = os.path.splitext(input)[1]
+    if not root.has_key(filetype):
+        raise Exception('unsupported filetype')
 
     if options.quiet:
         def log(m):pass
@@ -239,8 +247,8 @@ def main(argv=None):
         problem_file = {}
     else:
         svn = pysvn.Client()
-        svn.update(root)
-        changes = svn.status(root)
+        svn.update(root[filetype])
+        changes = svn.status(root[filetype])
         wc = pysvn.wc_status_kind
         problem = [wc.modified, wc.added, wc.conflicted, wc.deleted, wc.unversioned]
         problem_file = dict([(f.path, str(f.text_status)) for f in changes if f.text_status in problem])

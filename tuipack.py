@@ -24,16 +24,18 @@ importRule = re.compile(r"@import\s+(\S+)")
 def getRequires(src):
     '''获取依赖文件列表'''
     requires = []
-    rootpath = root[filetype] if filetype != '' else root[os.path.splitext(src)[1]]
+
+    if workpath == None:
+        workpath = (root['svn'] or root['dev']) + (root[filetype] if filetype != '' else root[os.path.splitext(src)[1]])
 
     try:
-        src = open(src)
+        src = open(workpath + src)
         for line in src:
             result = re.search(importRule, line)
             if not result == None:
                 result = result.group(1)
-                if not rootpath in result:
-                    result = os.path.join(rootpath, result)
+                if not workpath in result:
+                    result = os.path.join(workpath, result)
                 requires.append(result)
             else:
                 #只在顶部第一个ScriptDoc里查找连续的@import标签
@@ -53,11 +55,11 @@ def parseDocs(src, svnKeywords=False):
     """
     f = None
     try:
-        f = src if type(src) == file else open(src)
+        f = src if type(src) == file else open(workpath + src)
         f.seek(0)
         linecode = ''
         line = '\n'
-        pathinfo = ' * ' + f.name.replace(root['base'], '').replace('\\', '') + '\n'
+        pathinfo = ' * ' + f.name.replace(root['dev'], '').replace('\\', '') + '\n'
         scriptDoc = False
         while line:
             if re.search(r'\s*\/\*', line):
@@ -107,13 +109,13 @@ def writeFile(filelist):
 
             js = None
             try:
-                js = open(f)
+                js = open(workpath + f)
                 linecode, pos = parseDocs(js, svnKeywords=(file_count == 1))
                 js.seek(pos)
                 
                 if file_count == 1: # 最后一个文件是Input文件，原有scriptDoc移到顶部, 增增加包文件名的新scriptDoc
                     code = linecode[1:].decode(chardet.detect(linecode)['encoding']) + code
-                    linecode = '\n/**\n * ' + f.replace(root['base'], '').replace('\\', '') + '\n */\n'
+                    linecode = '\n/**\n * ' + f.replace('\\', '') + '\n */\n'
 
                 # 读取剩余的内容，与之前逐行取到的内容合并
                 try:
@@ -191,10 +193,14 @@ def initConfig():
     confpath = os.path.join(os.path.dirname(__file__), "config")
     cf.read(confpath)
     root = {
-        'base': cf.get('tuipack','root'),
-        '.js': cf.get('tuipack','jsroot'),
-        '.css': cf.get('tuipack','cssroot')
+        'dev': cf.get('file','dev'),
+        '.js': cf.get('file','js'),
+        '.css': cf.get('file','css')
     }
+    try:
+        root['svn'] = cf.get('file','svn')
+    except:
+        root['svn'] = None
     filetype = ''
 
 
@@ -246,12 +252,18 @@ def main(argv=None):
     if options.nocheck:
         problem_file = {}
     else:
-        svn = pysvn.Client()
-        svn.update(root[filetype])
-        changes = svn.status(root[filetype])
-        wc = pysvn.wc_status_kind
-        problem = [wc.modified, wc.added, wc.conflicted, wc.deleted, wc.unversioned]
-        problem_file = dict([(f.path, str(f.text_status)) for f in changes if f.text_status in problem])
+        try:
+            svn = pysvn.Client()
+            svn.update(root['svn'])
+            changes = svn.status(root['svn'])
+            wc = pysvn.wc_status_kind
+            problem = [wc.modified, wc.added, wc.conflicted, wc.deleted, wc.unversioned]
+            problem_file = dict([(f.path, str(f.text_status)) for f in changes if f.text_status in problem])
+        except:
+            log("WARN: svn repo does not exit")
+            problem_file = {}
+            options.nocheck = True
+
     
     # 判断输出编码
     if options.charset:

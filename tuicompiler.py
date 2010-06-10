@@ -3,69 +3,74 @@
 """
 tuicompiler.py
 
+Copyright (c) 2010 Dexter.Yy
+Released under LGPL Licenses.
 """
 
-import io, re, sys, os, ConfigParser
+import io, re, sys, os
+import ConfigParser
+import subprocess as sub
 from optparse import OptionParser
-import tuipack
+from tuipacker import TUIPacker, printLog
 
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    global log
-
+    # 从配置里获取可执行命令
     cf = ConfigParser.ConfigParser()
     confpath = os.path.join(os.path.dirname(__file__), "config")
     cf.read(confpath)
     jscompressor = cf.get('tools','jscompressor')
     csscompressor = cf.get('tools', 'csscompressor')
-    jspack = cf.get('tools', 'jspack')
     dos2unix = cf.get('tools', 'dos2unix')
 
-    parser = OptionParser()
-    parser.add_option("-o", "--output", 
-                        dest="outputfilename",
-                        help="write output to <file>", 
-                        metavar="FILE")
-    parser.add_option("-c", "--charset", 
-                        dest="charset",
-                        help="Convert the outfile to <charset>", 
-                        type="string")
-    parser.add_option("-n", "--nocheck", 
-                        dest="nocheck",
-                        help="NOT check svn status", 
-                        action="store_true")
-    parser.add_option("-q", "--quiet", 
-                        dest="quiet",
-                        help="Quiet mode. Suppress all warning and messages", 
-                        action="store_true")
-    (options, args) = parser.parse_args()
+    opt = OptionParser()
+    opt.add_option("-o", "--output",
+                   dest="outputfilename",
+                   help="write output to <file>",
+                   metavar="FILE")
+    opt.add_option("-c", "--charset",
+                   dest="charset",
+                   help="convert the outfile to <charset>",
+                   type="string")
+    opt.add_option("-s", "--simple",
+                   dest="simple",
+                   help="simple mode, no review",
+                   action="store_false")
+    opt.add_option("-q", "--quiet",
+                   dest="quiet",
+                   help="quiet mode, suppress all warning and messages",
+                   action="store_true")
+    (opt, args) = opt.parse_args()
     
     if args and args[0]:
         input = args[0]
     else:
         raise Exception('need input file')
 
-    filetype = os.path.splitext(input)[1]
+    filetype = os.path.splitext(input)[1][1:]
 
-    if options.quiet:
-        def log(m):pass
-    else:
-        def log(message): print(message)
-    
-    if options.charset:
-        charset = options.charset.lower()
-    else:
-        charset = tuipack.getCharset(input)
+    packer = TUIPacker(input)
 
-    if len(tuipack.getRequires(input)) <= 0:
+    # 边执行边打印日志
+    if not opt.quiet:
+        TUIPacker.log = printLog(TUIPacker.log)
+
+    # 压缩时使用的编码
+    if opt.charset:
+        charset = opt.charset.lower()
+    else:
+        charset = packer.getCharset(input)
+
+    # 没有导入代码的时候，不需要生成中间文件
+    if len(packer.getRequires(input)) <= 0:
         output = input
-    elif options.outputfilename:
-        output = options.outputfilename
+    elif opt.outputfilename:
+        output = opt.outputfilename
     else:
-        output = tuipack.getOutputName(input)
+        output = packer.getOutputName(input)
     
     #output_2 = re.sub(r'([^\.]+?)([_\.][^_]*\.)(\w+)$', 
                  #lambda mo: mo.group(1) 
@@ -95,33 +100,46 @@ def main(argv=None):
                     + mo.group(3), 
                  output)
 
-    dos2unix += ' -q' if options.quiet else ''
+    dos2unix += ' -q' if opt.quiet else ''
 
-    if filetype == ".js":
-        cmd = '{0} {1}{7}{8}; {2} {5}; {3} --charset {4} {5} -o {6}'.format(
-            jspack, input, dos2unix, jscompressor, charset, output, output_2,
-            options.nocheck and ' -n' or '',
-            options.quiet and ' -q' or '')
-    elif filetype == ".css":
-        cmd = '{3} {1}; {0} {1} -o {2}'.format(
-            jscompressor, input, output_2, dos2unix)
+
+    cmd = []
+
+    if filetype == "js":
+        cmd.append(['python',
+                    os.path.join(os.path.dirname(__file__), "tuipacker.py"),
+                    input,
+                    opt.simple and '-s' or '',
+                    opt.quiet and '-q' or ''])
+
+        cmd.append(dos2unix.split(" ") + [output])
+
+        cmd.append(jscompressor.split(" ")
+                   + ['--charset', charset, output, '-o', output_2])
+
+    elif filetype == "css":
+        cmd.append([dos2unix, input])
+
+        cmd.append(csscompressor.split(" ")
+                   + ['--charset', charset, input, '-o', output_2])
     else:
         raise Exception('file type not supported')
 
-    result = 0
-    for e in cmd.split(';'):
-        if result == 0:
-            log('[CMD] ' + e + '')
-            result = os.system(e)
-    if result == 0:
-        log('    compressed file: ' + output_2)
-        log('    COMPRESS SUCCESS!')
+    for e in cmd:
+        if re.search(r'compressor', " ".join(e)):
+            packer.log('Compress', type="task")
+            packer.log(output_2, type="action", act="write", dest="compressed file")
+        packer.log(" ".join(e), type="command")
+        sub.check_call(e)
+
+    packer.log('compress success', type="taskend")
+
 
 
 if __name__ == "__main__":
-    try:
+    #try:
         main()
-    except Exception, e:
-        print '\n[error] ' + str(e)
-        sys.exit(1)
+    #except Exception, e:
+        #print '\n[error] ' + str(e)
+        #sys.exit(1)
 

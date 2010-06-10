@@ -1,11 +1,15 @@
 [tools]
-jscompressor=java -jar /Users/dexteryy/code/cmd/tuicompiler/yuicompressor.jar
-csscompressor=java -jar /Users/dexteryy/code/cmd/tuicompiler/yuicompressor.jar
-jspack=python /Users/dexteryy/code/cmd/tuicompiler/tuipack.py
-dos2unix=/Users/dexteryy/code/cmd/tuicompiler/dos2unix
+jscompressor = java -jar /Users/dexteryy/code/cmd/tuicompiler/bin/yuicompressor.jar
+csscompressor = java -jar /Users/dexteryy/code/cmd/tuicompiler/bin/yuicompressor.jar
+dos2unix = /Users/dexteryy/code/cmd/tuicompiler/bin/dos2unix
 
 [file]
-dev=/Users/dexteryy/Sites/tudouui/
-svn=/Users/dexteryy/Sites/tudouuisvn/
-js=js/
-css=skin/
+work = /Users/dexteryy/Sites/tudouui/
+svn = /Users/dexteryy/Sites/tudouuisvn/
+js = js/
+css = skin/
+
+[extensions]
+filter = ScriptDoc
+review =
+filetype =

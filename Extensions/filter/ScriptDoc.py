@@ -61,4 +61,5 @@ def _parseDocs(lines, path, meta):
         linecode = ['\n/**\n', pathinfo, ' */\n']
 
     # 把修改过的内容跟剩余的内容重新拼接
-    return linecode + lines
+    linecode += lines
+    return linecode

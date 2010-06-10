@@ -11,5 +11,6 @@ css = skin/
 
 [extensions]
 filter = ScriptDoc
-review =
-filetype =
+batch =
+ftplugin =
+plugin =

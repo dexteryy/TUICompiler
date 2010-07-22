@@ -33,7 +33,7 @@ class TUIPacker(LogManager):
     }
     enableModules = {                               # 启用的扩展模块
         'filter': [],
-        'review': [],
+        'batch': [],
         'ftplugin': [],
         'plugin': [],
     }
@@ -168,7 +168,7 @@ class TUIPacker(LogManager):
 
 
     def filter(self, lines, **meta):
-        """ 提供给插件/中间件的接口
+        """ 提供给插件/中间件的钩子
             通过编写这个方法的装饰器，可以实现更多代码生成功能
             meta参数：name, order, total
         """
@@ -234,7 +234,7 @@ def main(argv=None):
                    type="string")
     opt.add_option("-s", "--simple",
                    dest="simple",
-                   help="simple mode, no review",
+                   help="simple mode",
                    action="store_false")
     opt.add_option("-q", "--quiet",
                    dest="quiet",
@@ -257,14 +257,20 @@ def main(argv=None):
         TUIPacker.log = printLog(TUIPacker.log)
     
     modules = packer.enableModules
-    for group in modules:
-    # 检查配置文件里已激活的扩展模块
-        if group == 'filter':
-        # 装载过滤器插件
-            for plugin in modules[group]:
-                filter = __import__('.'.join(['Extensions', group, plugin]),
-                                    globals(), locals(), ['filter'], -1).filter
-                TUIPacker.filter = filter(TUIPacker.filter)
+
+    # 装载过滤器插件
+    if 'filter' in modules:
+        originFilter = TUIPacker.filter
+        hook = TUIPacker.filter
+        for plugin in modules['filter']:
+            filter = __import__('.'.join(['Extensions', 'filter', plugin]),
+                                globals(), locals(), ['filter'], -1).filter
+            hook = filter(hook)
+            hook.__name__ = originFilter.__name__
+            hook.__doc__ = originFilter.__doc__
+            hook.__dict__.update(originFilter.__dict__) 
+        TUIPacker.filter = hook 
+
 
     # 执行构建
     packer.make()

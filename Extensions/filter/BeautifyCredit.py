@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 """
-ScriptDoc
+BeautifyCredit
 filter for TUIPacker
 
 Copyright (c) 2010 Dexter.Yy
@@ -19,9 +19,6 @@ def filter(inner):
         rootpath = self.path['svn'] or self.path['work']
         lines = _parseDocs(lines, rootpath, meta)
         return inner(self, lines, **meta)
-    wrapper.__name__ = inner.__name__
-    wrapper.__doc__ = inner.__doc__
-    wrapper.__dict__.update(inner.__dict__) 
     return wrapper
 
 

@@ -125,9 +125,9 @@ class TUIPacker(LogManager):
         file_count = len(filelist)
         if file_count <= 1:
             self.log('0', type="stat", dest="total files")
-            raise Exception(0) # 用0作为返回状态，与普通错误区别
-
-        self.log(len(filelist), type="stat", dest="total files")
+            #raise Exception(0) # 用0作为返回状态，与普通错误区别
+        else:
+            self.log(len(filelist), type="stat", dest="total files")
 
         code = ""
         notes = {

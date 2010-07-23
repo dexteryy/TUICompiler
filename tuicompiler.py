@@ -65,9 +65,9 @@ def main(argv=None):
         charset = packer.getCharset(input)
 
     # 没有导入代码的时候，不需要生成中间文件
-    if len(packer.getRequires(input)) <= 0:
-        output = input
-    elif opt.outputfilename:
+    #if len(packer.getRequires(input)) <= 0:
+        #output = input
+    if opt.outputfilename:
         output = opt.outputfilename
     else:
         output = packer.getOutputName(input)

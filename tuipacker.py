@@ -16,6 +16,7 @@ import Extensions
 
 
 class TUIPacker(LogManager):
+    enableAdvanced = False                          # 默认不开启高级编译选项
     filetype = ''                                   # 文件类型，自动影响构建行为
     charset = None                                  # 输出文件的编码
     inputfile = None                                # 构建对象，包含元信息的文件
@@ -39,10 +40,11 @@ class TUIPacker(LogManager):
     }
 
 
-    def __init__(self, input, output=None, charset=None):
+    def __init__(self, input, output=None, charset=None, advanced=False):
 
         self.inputfile = input
         self.outputfile = output or self.getOutputName(input)
+        self.enableAdvanced = advanced
 
         # 读取配置
         cf = ConfigParser.ConfigParser()
@@ -157,6 +159,9 @@ class TUIPacker(LogManager):
             if order == file_count:
                 input_charset = file_charset
 
+        if not self.enableAdvanced and file_count <= 1:
+            return
+
         code = notes['licence'].decode(input_charset) + code
 
         self.log(self.charset, type="stat", dest="charset")
@@ -218,12 +223,7 @@ def printLog(fn):
     return newfn
 
 
-
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-
-    opt = OptionParser()
+def initOptions(opt):
     opt.add_option("-o", "--output",
                    dest="outputfilename",
                    help="write output to <file>",
@@ -236,10 +236,23 @@ def main(argv=None):
                    dest="simple",
                    help="simple mode",
                    action="store_false")
+    opt.add_option("-a", "--advanced",
+                   dest="advanced",
+                   help="advanced mode, create compiled file",
+                   action="store_true")
     opt.add_option("-q", "--quiet",
                    dest="quiet",
                    help="quiet mode, suppress all warning and messages",
                    action="store_true")
+    return opt
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    opt = OptionParser()
+    initOptions(opt)
     (opt, args) = opt.parse_args()
     
     if args and args[0]:
@@ -249,7 +262,8 @@ def main(argv=None):
 
     packer = TUIPacker(input,
         output = opt.outputfilename,
-        charset = opt.charset and opt.charset.lower()
+        charset = opt.charset and opt.charset.lower(),
+        advanced = opt.advanced
     )
 
     # 边执行边打印日志

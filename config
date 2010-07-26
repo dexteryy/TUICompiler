@@ -10,7 +10,7 @@ js = js/
 css = skin/
 
 [extensions]
-filter = MakeDoc,BeautifyCredit
+filter = BeautifyCredit
 batch =
 ftplugin =
 plugin =

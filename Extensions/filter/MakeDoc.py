@@ -55,14 +55,14 @@ def _parseDocs(lines, path, meta):
                                 or not re.search(r'^\(', info[1] or '') == None and "Method"
                                 or "Attribute"
                 }
+                data.append(block)
             else:
-                block = data.pop()
-                if not block.has_key(tag):
-                    block[tag] = v
-                else:
-                    block[tag] += '\n' + v
-
-            data.append(block)
+                if len(data) > 0:
+                    block = data[len(data) - 1]
+                    if not block.has_key(tag):
+                        block[tag] = v
+                    else:
+                        block[tag] += '\n' + v
 
         linecode.append(line.encode('utf-8'))
 

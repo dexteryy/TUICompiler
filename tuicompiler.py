@@ -11,7 +11,7 @@ import io, re, sys, os
 import ConfigParser
 import subprocess as sub
 from optparse import OptionParser
-from tuipacker import TUIPacker, printLog
+from tuipacker import TUIPacker, printLog, initOptions
 
 
 def main(argv=None):
@@ -27,22 +27,7 @@ def main(argv=None):
     dos2unix = cf.get('tools', 'dos2unix')
 
     opt = OptionParser()
-    opt.add_option("-o", "--output",
-                   dest="outputfilename",
-                   help="write output to <file>",
-                   metavar="FILE")
-    opt.add_option("-c", "--charset",
-                   dest="charset",
-                   help="convert the outfile to <charset>",
-                   type="string")
-    opt.add_option("-s", "--simple",
-                   dest="simple",
-                   help="simple mode, no review",
-                   action="store_false")
-    opt.add_option("-q", "--quiet",
-                   dest="quiet",
-                   help="quiet mode, suppress all warning and messages",
-                   action="store_true")
+    initOptions(opt)
     (opt, args) = opt.parse_args()
     
     if args and args[0]:
@@ -64,10 +49,10 @@ def main(argv=None):
     else:
         charset = packer.getCharset(input)
 
-    # 没有导入代码的时候，不需要生成中间文件
-    #if len(packer.getRequires(input)) <= 0:
-        #output = input
-    if opt.outputfilename:
+    # 没有导入代码的时候，不需要生成中间文件，高级/编译模式下总是生成文件
+    if not opt.advanced and len(packer.getRequires(input)) <= 0:
+        output = input
+    elif opt.outputfilename:
         output = opt.outputfilename
     else:
         output = packer.getOutputName(input)
@@ -107,10 +92,8 @@ def main(argv=None):
 
     if filetype == "js":
         cmd.append(['python',
-                    os.path.join(os.path.dirname(__file__), "tuipacker.py"),
-                    input,
-                    opt.simple and '-s' or '',
-                    opt.quiet and '-q' or ''])
+                    os.path.join(os.path.dirname(__file__), "tuipacker.py")]
+                    + argv[1:])
 
         cmd.append(dos2unix.split(" ") + [output])
 

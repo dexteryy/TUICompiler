@@ -8,7 +8,6 @@ Released under LGPL Licenses.
 """
 
 import io, re, sys, os
-import chardet
 import ConfigParser
 from optparse import OptionParser
 from Lib.LogManager import LogManager
@@ -148,14 +147,13 @@ class TUIPacker(LogManager):
                 notes = notes
             )
             src = ''.join(filelines)
-
-            char = chardet.detect(src) # 侦测编码必须针对文件整体
-            file_charset = char['encoding'].lower()
-            if 'utf-8' == file_charset or 'ascii' == file_charset:
+            try:
                 file_charset = "utf-8"
-            else: # 中文可能被错误识别为latin编码
+                usrc = src.decode(file_charset)
+            except: # 中文可能被错误识别为latin编码, 所以除utf8之外统一用gb18030
                 file_charset = "gb18030"
-            code += src.decode(file_charset)
+                usrc = src.decode(file_charset)
+            code += usrc
             if order == file_count:
                 input_charset = file_charset
 
@@ -207,7 +205,14 @@ class TUIPacker(LogManager):
         f = open(input)
         src = f.read()
         char = re.search(r'@charset\s+["\']?([\w-]+)', src)
-        char = char and char.group(1) or chardet.detect(src)['encoding']
+        char = char and char.group(1)
+        if not char:
+            try:
+                char = "utf-8"
+                src.decode(char)
+            except:
+                char = "gb18030"
+                src.decode(char)
         return char.lower()
 
 

@@ -28,6 +28,10 @@ def main(argv=None):
 
     opt = OptionParser()
     initOptions(opt)
+    opt.add_option("-z", "--compress",
+                   dest="compress",
+                   help="generate compressed file",
+                   action="store_true")
     (opt, args) = opt.parse_args()
     
     if args and args[0]:
@@ -90,15 +94,23 @@ def main(argv=None):
 
     cmd = []
 
+    def clearArgv(argv, *a):
+        """从一个命令参数列表里删除指定的参数"""
+        for i in a:
+            if i in argv:
+                del(argv[argv.index(i)])
+        return argv
+
     if filetype == "js":
         cmd.append(['python',
                     os.path.join(os.path.dirname(__file__), "tuipacker.py")]
-                    + argv[1:])
+                    + clearArgv(argv[1:], '-z'))
 
         cmd.append(dos2unix.split(" ") + [output])
 
-        cmd.append(jscompressor.split(" ")
-                   + ['--charset', charset, output, '-o', output_2])
+        if opt.compress:
+            cmd.append(jscompressor.split(" ")
+                       + ['--charset', charset, output, '-o', output_2])
 
     elif filetype == "css":
         cmd.append([dos2unix, input])
@@ -109,11 +121,13 @@ def main(argv=None):
         raise Exception('file type not supported')
 
     for e in cmd:
+        #d = time.time()
         if re.search(r'compressor', " ".join(e)):
             packer.log('Compress', type="task")
             packer.log(output_2, type="action", act="write", dest="compressed file")
         packer.log(" ".join(e), type="command")
         sub.check_call(e)
+        #packer.log(time.time() - d, type="stat", dest="Total Time")
 
     packer.log('compress success', type="taskend")
 

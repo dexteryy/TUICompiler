@@ -4,10 +4,10 @@ csscompressor = java -jar /Users/dexteryy/code/cmd/tuicompiler/bin/yuicompressor
 dos2unix = /Users/dexteryy/code/cmd/tuicompiler/bin/dos2unix
 
 [file]
-work = /Users/dexteryy/Sites/tudouui/
-svn = /Users/dexteryy/Sites/tudouuisvn/
+work = public/
+svn =
 js = js/
-css = skin/
+css = css/
 
 [extensions]
 filter = BeautifyCredit

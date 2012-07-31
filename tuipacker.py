@@ -39,7 +39,7 @@ class TUIPacker(LogManager):
     }
 
 
-    def __init__(self, input, output=None, charset=None, advanced=False):
+    def __init__(self, input, output=None, charset=None, advanced=False, lib=None):
 
         self.inputfile = input
         self.outputfile = output or self.getOutputName(input)
@@ -74,7 +74,7 @@ class TUIPacker(LogManager):
         self.charset = charset or self.getCharset(input)
 
         # 在不提供svn位置的情况下，默认使用工作目录
-        self.libpath = (self.path['svn'] or self.path['work']) \
+        self.libpath = (lib or self.path['svn'] or self.path['work']) \
                      + (self.path[self.filetype] if self.filetype != ''
                         else self.path[os.path.splitext(input)[1]])
 
@@ -245,6 +245,10 @@ def initOptions(opt):
                    dest="advanced",
                    help="advanced mode, create compiled file",
                    action="store_true")
+    opt.add_option("-l", "--lib",
+                   dest="libpath",
+                   help="use a certain library path",
+                   type="string")
     opt.add_option("-q", "--quiet",
                    dest="quiet",
                    help="quiet mode, suppress all warning and messages",
@@ -268,7 +272,8 @@ def main(argv=None):
     packer = TUIPacker(input,
         output = opt.outputfilename,
         charset = opt.charset and opt.charset.lower(),
-        advanced = opt.advanced
+        advanced = opt.advanced,
+        lib=opt.libpath
     )
 
     # 边执行边打印日志

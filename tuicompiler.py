@@ -111,6 +111,12 @@ def main(argv=None):
         if opt.compress:
             cmd.append(jscompressor.split(" ")
                        + ['--charset', charset, output, '-o', output_2])
+            #cmd.append(jscompressor.split(" ")
+                       #+ ['--warning_level', 'QUIET',
+                          ##'--formatting', 'pretty_print', 
+                          #'--charset', charset, 
+                          #'--js', output, 
+                          #'--js_output_file', output_2])
 
     elif filetype == "css":
         cmd.append([dos2unix, input])
